@@ -1,0 +1,59 @@
+// Añadir una nueva columna en la tabla de productos de WooCommerce
+add_filter('manage_edit-product_columns', 'add_updated_date_column', 20);
+function add_updated_date_column($columns) {
+    // Inserta la nueva columna después de la columna del título
+    $new_columns = [];
+    foreach ($columns as $key => $value) {
+        $new_columns[$key] = $value;
+        if ($key === 'name') { // Añade la nueva columna después del nombre
+            $new_columns['updated_date'] = __('Fecha de Actualización', 'woocommerce');
+        }
+    }
+    return $new_columns;
+}
+
+// Rellenar los datos de la nueva columna con un formato legible
+add_action('manage_product_posts_custom_column', 'populate_updated_date_column', 10, 2);
+function populate_updated_date_column($column, $post_id) {
+    if ($column === 'updated_date') {
+        // Obtén la fecha de actualización del producto
+        $updated_date = get_post_modified_time('d/m/Y H:i', false, $post_id);
+        if ($updated_date) {
+            echo '<span>' . esc_html($updated_date) . '</span>';
+        } else {
+            echo __('No disponible', 'woocommerce');
+        }
+    }
+}
+
+// Hacer que la nueva columna sea ordenable
+add_filter('manage_edit-product_sortable_columns', 'make_updated_date_column_sortable');
+function make_updated_date_column_sortable($sortable_columns) {
+    $sortable_columns['updated_date'] = 'modified';
+    return $sortable_columns;
+}
+
+// Modificar la consulta de la tabla para ordenar por la columna de fecha de actualización
+add_action('pre_get_posts', 'sort_by_updated_date_column');
+function sort_by_updated_date_column($query) {
+    if (!is_admin() || !$query->is_main_query()) {
+        return;
+    }
+
+    $orderby = $query->get('orderby');
+
+    if ('modified' === $orderby) {
+        $query->set('orderby', 'modified');
+    }
+}
+
+// Añadir estilos CSS a la nueva columna para evitar problemas de superposición
+add_action('admin_head', 'add_custom_column_styles');
+function add_custom_column_styles() {
+    echo '<style>
+        .column-updated_date {
+            width: 150px; /* Ajusta el ancho de la columna */
+            text-align: center; /* Centra el contenido */
+        }
+    </style>';
+}
